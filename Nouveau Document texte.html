@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GIF reconstitué (12x12 tiles)</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #fff;
+      height: 100vh;
+    }
+
+    .gif-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: repeat(12, 1fr);
+      width: 524px;   /* largeur totale du GIF original */
+      height: 393px;  /* hauteur totale du GIF original */
+      overflow: hidden;
+    }
+
+    .gif-grid img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      margin: 0;
+      padding: 0;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="gif-grid">
+    <!-- Les 144 tuiles -->
+    <!-- Générées automatiquement : r = ligne, c = colonne -->
+    <!-- Tu peux coller ce bloc généré automatiquement si besoin -->
+    <!-- Exemple pour les 3 premières lignes -->
+    <!-- ligne 0 -->
+    <img src="tile_r0_c0_12x12.gif" alt="">
+    <img src="tile_r0_c1_12x12.gif" alt="">
+    <img src="tile_r0_c2_12x12.gif" alt="">
+    <img src="tile_r0_c3_12x12.gif" alt="">
+    <img src="tile_r0_c4_12x12.gif" alt="">
+    <img src="tile_r0_c5_12x12.gif" alt="">
+    <img src="tile_r0_c6_12x12.gif" alt="">
+    <img src="tile_r0_c7_12x12.gif" alt="">
+    <img src="tile_r0_c8_12x12.gif" alt="">
+    <img src="tile_r0_c9_12x12.gif" alt="">
+    <img src="tile_r0_c10_12x12.gif" alt="">
+    <img src="tile_r0_c11_12x12.gif" alt="">
+
+    <!-- ligne 1 -->
+    <img src="tile_r1_c0_12x12.gif" alt="">
+    <img src="tile_r1_c1_12x12.gif" alt="">
+    <img src="tile_r1_c2_12x12.gif" alt="">
+    <img src="tile_r1_c3_12x12.gif" alt="">
+    <img src="tile_r1_c4_12x12.gif" alt="">
+    <img src="tile_r1_c5_12x12.gif" alt="">
+    <img src="tile_r1_c6_12x12.gif" alt="">
+    <img src="tile_r1_c7_12x12.gif" alt="">
+    <img src="tile_r1_c8_12x12.gif" alt="">
+    <img src="tile_r1_c9_12x12.gif" alt="">
+    <img src="tile_r1_c10_12x12.gif" alt="">
+    <img src="tile_r1_c11_12x12.gif" alt="">
+
+    <!-- ligne 2 -->
+    <img src="tile_r2_c0_12x12.gif" alt="">
+    <img src="tile_r2_c1_12x12.gif" alt="">
+    <img src="tile_r2_c2_12x12.gif" alt="">
+    <img src="tile_r2_c3_12x12.gif" alt="">
+    <img src="tile_r2_c4_12x12.gif" alt="">
+    <img src="tile_r2_c5_12x12.gif" alt="">
+    <img src="tile_r2_c6_12x12.gif" alt="">
+    <img src="tile_r2_c7_12x12.gif" alt="">
+    <img src="tile_r2_c8_12x12.gif" alt="">
+    <img src="tile_r2_c9_12x12.gif" alt="">
+    <img src="tile_r2_c10_12x12.gif" alt="">
+    <img src="tile_r2_c11_12x12.gif" alt="">
+
+    <!-- etc. jusqu’à ligne 11 -->
+  </div>
+
+</body>
+</html>
