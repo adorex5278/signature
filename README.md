@@ -12,10 +12,10 @@ Deux familles d'images, deux régimes différents :
 | | Bandeau événement | Signatures nominatives |
 |---|---|---|
 | Fichier | 1 seul, partagé par tout le monde | 1 par personne (30) |
-| Format | 1200 × 421 | 1108 × 277 |
+| Format | 1108 × 277 | 1108 × 277 |
 | Change quand ? | À chaque campagne (salon, Noël…) | Rarement (nom, poste, tél.) |
 | Qui le fournit | Toi / normalise_banniere.py | Marketing, export Canva |
-| Nommage | `banniere_evenement_1200px_20ips_HEBERGE.gif` (fixe) | `prenom.gif` |
+| Nommage | `banniere_evenement_1108x277.gif` (fixe) | `prenom.gif` |
 
 **Le principe qui rend tout ça indolore : l'URL ne change jamais.**
 Les 30 signatures Outlook contiennent chacune deux `<img src="...">` figés.
@@ -30,7 +30,7 @@ Dépôt : `github.com/adorex5278/signature`
 
 ```
 signature/
-├── banniere_evenement_1200px_20ips_HEBERGE.gif   ← bandeau partagé, ne pas renommer
+├── banniere_evenement_1108x277.gif   ← bandeau partagé, ne pas renommer
 ├── nominatives/
 │   ├── adrien.gif
 │   ├── alex.gif
@@ -44,7 +44,7 @@ signature/
 ## 3. URL utilisées dans les signatures Outlook
 
 ```
-Bandeau :     https://raw.githubusercontent.com/adorex5278/signature/main/banniere_evenement_1200px_20ips_HEBERGE.gif
+Bandeau :     https://raw.githubusercontent.com/adorex5278/signature/main/banniere_evenement_1108x277.gif
 Nominative :  https://raw.githubusercontent.com/adorex5278/signature/main/nominatives/PRENOM.gif
 ```
 
@@ -63,11 +63,11 @@ python tools/normalise_banniere.py visuel_noel.mp4
 ```
 
 Accepte GIF, PNG, JPG, WEBP, MP4 — n'importe quelle dimension en entrée.
-Sort toujours en 1200 × 421, poste-image en tête pour Outlook classique,
+Sort toujours en 1108 × 277, poste-image en tête pour Outlook classique,
 et compresse jusqu'à tenir sous ~2,5 Mo.
 
 Puis : pousser le fichier produit sur GitHub **sous le nom déjà utilisé**
-(`banniere_evenement_1200px_20ips_HEBERGE.gif`). Ne jamais renommer — ça
+(`banniere_evenement_1108x277.gif`). Ne jamais renommer — ça
 casserait l'URL dans les 30 signatures.
 
 Attendre 5 minutes (cache raw), vérifier en navigation privée, c'est fait.
@@ -172,10 +172,11 @@ l'étape 5.
 
 ## 8. Ce qu'il ne faut jamais faire
 
-- Renommer `banniere_evenement_1200px_20ips_HEBERGE.gif`.
-- Changer le gabarit (1200×421 / 1108×277) sans modifier `TARGET_W` /
-  `TARGET_H` en tête des deux scripts ET sans savoir que ça implique de
-  rouvrir les 30 signatures Outlook.
+- Renommer `banniere_evenement_1108x277.gif`.
+- Changer le gabarit (1108×277, désormais identique pour le bandeau et les
+  nominatives) sans modifier `TARGET_W` / `TARGET_H` en tête des deux
+  scripts ET sans savoir que ça implique de rouvrir les 30 signatures
+  Outlook.
 - Pousser un fichier hors gabarit "parce que ça ira plus vite" — les
   scripts existent justement pour éviter d'avoir à rouvrir Outlook plus
   tard. Un fichier hors gabarit dans une signature déjà collée s'affichera
