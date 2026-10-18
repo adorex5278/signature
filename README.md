@@ -1,7 +1,5 @@
 # Signatures GREYPE — README
 
-Dernière mise à jour : voir date du commit. Écrit pour qu'Adrien n'ait plus à
-redemander comment tout ça marche.
 
 ---
 
