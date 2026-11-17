@@ -117,6 +117,13 @@ Sans `--push`, le fichier est modifié en local et il reste à faire `git push`.
 Le marketing fournit un dossier de GIF Canva, format et poids variables,
 noms de fichiers en pagaille (espaces, majuscules, "GIF OK" collé au nom).
 
+**Visuel fixe (JPEG/PNG, sans animation) → fichier `prenom.jpg`, pas `.gif`.**
+Un GIF est limité à 256 couleurs : sur un visuel fixe ça dégrade nettement
+l'image. Le script sort donc un JPEG 4:4:4 à la qualité la plus haute qui
+tient dans le budget (adrien, elysee, rajaa, roxane sont en `.jpg`). L'URL du
+gabarit HTML doit alors finir en `.jpg` ; la hauteur (`height`) est affichée
+en fin de run. Seuls les visuels animés restent en `.gif`.
+
 ```bash
 python tools/normaliser_nominatives.py dossier_recu/ -o nominatives/
 ```

@@ -4,7 +4,9 @@
 normaliser_nominatives.py
 -------------------------
 Traite en lot les GIF nominatifs fournis par le marketing :
-  - renomme en prenom.gif (minuscules, sans accent ni espace)
+  - renomme en prenom.gif (minuscules, sans accent ni espace) ; une source FIXE
+    (.jpg/.png) sort en prenom.jpg, JPEG 4:4:4 a la qualite max qui tient
+    dans le budget (pas de palette GIF 256 couleurs, qui degrade)
   - force la LARGEUR 1108 (meme largeur que le bandeau evenement) ; la
     hauteur suit le ratio de la source, sans deformation
     (4:1 -> 1108x277, 600x250 -> 1108x462, etc.)
@@ -138,6 +140,27 @@ def traiter(source, destination, max_ko, strict=False):
     return resultat
 
 
+def traiter_statique(source, destination, max_ko, strict=False):
+    """Source fixe (JPEG / PNG) : PAS de passage par une palette GIF de 256
+    couleurs (bandes, perte nette). On sort un JPEG 4:4:4 a la qualite la plus
+    haute qui tient dans le budget.
+    Meme tuple de retour que traiter() : (octets, qualite, 0, resize, False,
+    cible, plafond_octets)."""
+    from PIL import Image
+    im = Image.open(source).convert("RGB")
+    cible = cible_pour(im.width, im.height, strict)
+    resize = im.size != cible
+    if resize:
+        im = im.resize(cible, Image.LANCZOS)
+    plafond = int(max_ko * 1024 * cible[1] / HAUTEUR)
+
+    for q in range(98, 59, -1):          # plus haute qualite qui rentre dans le budget
+        im.save(destination, "JPEG", quality=q, subsampling=0, optimize=True)
+        if os.path.getsize(destination) <= plafond:
+            break
+    return os.path.getsize(destination), q, 0, resize, False, cible, plafond
+
+
 def main():
     p = argparse.ArgumentParser(description="Normalise les GIF nominatifs en lot")
     p.add_argument("source", help="dossier contenant les GIF fournis")
@@ -148,15 +171,17 @@ def main():
                    help="force TOUT en 1108x277 (deforme si le ratio source differe)")
     args = p.parse_args()
 
-    if not shutil.which("gifsicle"):
-        sys.exit("gifsicle introuvable.\nWindows : choco install gifsicle")
     if not os.path.isdir(args.source):
         sys.exit(f"Dossier introuvable : {args.source}")
 
     os.makedirs(args.out, exist_ok=True)
-    fichiers = sorted(f for f in os.listdir(args.source) if f.lower().endswith(".gif"))
+    fichiers = sorted(f for f in os.listdir(args.source)
+                      if f.lower().endswith((".gif", ".jpg", ".jpeg", ".png")))
     if not fichiers:
-        sys.exit(f"Aucun .gif dans {args.source}")
+        sys.exit(f"Aucun .gif / .jpg / .png dans {args.source}")
+
+    if any(f.lower().endswith(".gif") for f in fichiers) and not shutil.which("gifsicle"):
+        sys.exit("gifsicle introuvable (necessaire pour les GIF).\nWindows : choco install gifsicle")
 
     mode = "strict 1108x277" if args.strict else f"largeur {LARGEUR}, hauteur selon ratio"
     print(f"Gabarit {mode}  |  budget {args.max_ko} Ko (a 277 px)  |  {len(fichiers)} fichiers\n")
@@ -184,37 +209,40 @@ def main():
             prenom = f"{prenom}{suffixe}"
         vus[prenom] = f
 
-        dst = os.path.join(args.out, f"{prenom}.gif")
+        est_gif = f.lower().endswith(".gif")
+        ext = ".gif" if est_gif else ".jpg"     # source fixe -> JPEG haute qualite
+        dst = os.path.join(args.out, f"{prenom}{ext}")
         avant = os.path.getsize(src)
         try:
-            apres, coul, lossy, resize, allege, cible, plafond = traiter(
+            traitement = traiter if est_gif else traiter_statique
+            apres, coul, lossy, resize, allege, cible, plafond = traitement(
                 src, dst, args.max_ko, args.strict)
         except Exception as e:
             alertes.append(f"ECHEC sur '{f}' : {e}")
             continue
 
         (w, h), n = dimensions(dst)
-        hauteurs[prenom] = h
+        hauteurs[prenom + ext] = h
         note = []
         if allege:
             note.append("frames reduites")
         if resize:
             note.append("redimensionne")
         if sw < LARGEUR:
-            alertes.append(f"'{prenom}.gif' : source en {sw} px de large, agrandie a {LARGEUR} — "
+            alertes.append(f"'{prenom}{ext}' : source en {sw} px de large, agrandie a {LARGEUR} — "
                            f"risque de flou, redemander un export natif plus grand si possible")
         if apres > plafond:
             note.append(f"depasse {plafond // 1024} Ko")
-            alertes.append(f"'{prenom}.gif' fait {apres/1024:.0f} Ko malgre compression max "
+            alertes.append(f"'{prenom}{ext}' fait {apres/1024:.0f} Ko malgre compression max "
                            f"(budget {plafond/1024:.0f} Ko) — a verifier a la main")
         if (w, h) != cible:
             note.append(f"HORS GABARIT {w}x{h}")
-            alertes.append(f"HORS GABARIT : {prenom}.gif fait {w}x{h} "
+            alertes.append(f"HORS GABARIT : {prenom}{ext} fait {w}x{h} "
                            f"(attendu {cible[0]}x{cible[1]}) — ne pas publier")
         note.append(f"{w}x{h}")
 
         gain += avant - apres
-        print(f"{f[:37]:<38} {'->':^4} {prenom + '.gif':<16} "
+        print(f"{f[:37]:<38} {'->':^4} {prenom + ext:<16} "
               f"{avant/1024:>7.0f}K {apres/1024:>7.0f}K  {', '.join(note)}")
 
     print("-" * 100)
@@ -226,7 +254,7 @@ def main():
     if autres:
         print(f'\nHAUTEUR A METTRE DANS LE HTML (width="{LARGEUR}", height=... ; defaut 277) :')
         for k, v in sorted(autres.items()):
-            print(f'  - {k}.gif -> height="{v}"')
+            print(f'  - {k} -> height="{v}"')
 
     if alertes:
         print("\nA VERIFIER :")
