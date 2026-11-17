@@ -25,8 +25,8 @@ import tempfile
 # ============================================================
 #  REGLAGES — a modifier seulement si tes signatures changent
 # ============================================================
-TARGET_W = 1200          # doit correspondre a width="..." dans la signature
-TARGET_H = 421           # doit correspondre a height="..." dans la signature
+TARGET_W = 1108          # doit correspondre a width="..." dans la signature
+TARGET_H = 277           # doit correspondre a height="..." dans la signature
 BG_COLOR = "white"       # fond des bandes de remplissage en mode "contain"
 DEFAULT_FPS = 20
 DEFAULT_MAX_MO = 2.5
