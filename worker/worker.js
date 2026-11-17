@@ -49,7 +49,6 @@ export default {
       headers: {
         "Content-Type": trouve.type,
         "Cache-Control": "public, max-age=300",
-        "X-Content-Type-Options": "nosniff",
       },
     });
   },
