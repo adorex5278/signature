@@ -37,6 +37,9 @@ GABARIT = """<!DOCTYPE html>
 <head><meta charset="utf-8"><title>Signature GREYPE</title></head>
 <body style="margin:20px;background:#ffffff;">
 
+<!-- ===== FORMULE DE POLITESSE — premiere ligne ===== -->
+<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#000000;">Cordialement,</p>
+
 <!-- ===== BANDEAU EVENEMENT — en haut, identique pour tout le monde ===== -->
 <img src="{url_bandeau}" width="{largeur}" style="{style}" alt="">
 
