@@ -39,7 +39,10 @@ signature/
 │   ├── adrien.gif
 │   ├── alex.gif
 │   ├── ... (18 à ce jour, 30 à terme)
+├── worker/
+│   └── worker.js                     ← Cloudflare Worker : URL stable sans extension (voir §9)
 ├── tools/
+│   ├── generer_gabarits.py           ← régénère les gabarits HTML (voir §9)
 │   ├── bandeau.py                    ← interrupteur du bandeau (on / off / nouveau)
 │   ├── normalise_banniere.py         ← pour le bandeau événement
 │   └── normaliser_nominatives.py     ← pour le lot de signatures perso
@@ -219,3 +222,47 @@ l'étape 5.
   scripts existent justement pour éviter d'avoir à rouvrir Outlook plus
   tard. Un fichier hors gabarit dans une signature déjà collée s'affichera
   déformé ou tronqué selon le client mail.
+
+---
+
+## 9. URL stable, indépendante du format (Cloudflare Worker)
+
+Problème : une URL GitHub contient l'extension (`adrien.gif`). Passer une
+image en `.jpg`/`.png` change l'URL → il faut recoller la signature.
+Solution gratuite, sans domaine : un **Worker Cloudflare** (`worker/worker.js`,
+~50 lignes) qui reçoit `/n/<prenom>` ou `/bandeau`, cherche le fichier sur
+GitHub (gif, jpg, png) et le renvoie avec le bon type. Les signatures
+pointent vers le Worker : **le format d'une image peut changer sans jamais
+toucher aux signatures collées**. L'interrupteur du bandeau (§4bis) continue de
+fonctionner tel quel.
+
+```
+Bandeau :     https://<worker>.workers.dev/bandeau
+Nominative :  https://<worker>.workers.dev/n/PRENOM
+```
+
+**Mise en place (une fois, ~10 min, gratuit — plan Free : 100 000 requêtes/jour)**
+
+1. Créer un compte gratuit sur `dash.cloudflare.com` (e-mail + mot de passe).
+2. *Workers & Pages* → *Create* → *Create Worker* (« Hello World ») → nom :
+   `greype-sig` → *Deploy*.
+3. *Edit code* → supprimer le code d'exemple → coller le contenu de
+   `worker/worker.js` → *Deploy*.
+4. Noter l'adresse du Worker : `https://greype-sig.<ton-sous-domaine>.workers.dev`.
+5. Vérifier dans un navigateur : `…/bandeau` et `…/n/adrien` affichent l'image.
+6. Générer les gabarits :
+   `python tools/generer_gabarits.py --worker https://greype-sig.<…>.workers.dev -o gabarits/`
+
+Les gabarits générés n'ont **aucun attribut `height`** (largeur seule +
+`height:auto`) : la hauteur suit l'image, donc un visuel d'un autre ratio ne
+demande pas non plus de modifier le gabarit.
+
+**Points de vigilance**
+- L'adresse `workers.dev` est liée au compte Cloudflare : si le compte est
+  supprimé ou suspendu, toutes les signatures cassent. Garder l'accès (mot de
+  passe dans le gestionnaire de mots de passe, au moins 2 personnes informées).
+- Certains filtres anti-spam / passerelles web classent `workers.dev` avec
+  réserve : tester l'arrivée de vraies images chez des destinataires externes
+  (Gmail, Outlook, une grande entreprise) avant de généraliser.
+- Si un jour le domaine `greype-france.com` devient accessible, remplacer
+  `workers.dev` par un sous-domaine GREYPE (une seule fois, dans le générateur).
