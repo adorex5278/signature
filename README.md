@@ -241,6 +241,12 @@ Bandeau :     https://<worker>.workers.dev/bandeau
 Nominative :  https://<worker>.workers.dev/n/PRENOM
 ```
 
+**État : déployé** sur `https://greype-sig.greype.workers.dev` (compte Cloudflare
+gratuit, sous-domaine `greype`). Testé : `/bandeau`, `/n/adrien` (jpg),
+`/n/kinjodemol` (gif). Les gabarits des 18 signatures pointent dessus.
+Le code déployé est celui de `worker/worker.js` (à recoller dans l'éditeur
+Cloudflare si on le modifie).
+
 **Mise en place (une fois, ~10 min, gratuit — plan Free : 100 000 requêtes/jour)**
 
 1. Créer un compte gratuit sur `dash.cloudflare.com` (e-mail + mot de passe).
