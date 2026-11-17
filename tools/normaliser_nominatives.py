@@ -5,13 +5,19 @@ normaliser_nominatives.py
 -------------------------
 Traite en lot les GIF nominatifs fournis par le marketing :
   - renomme en prenom.gif (minuscules, sans accent ni espace)
-  - force le gabarit 1108 x 277
+  - force la LARGEUR 1108 (meme largeur que le bandeau evenement) ; la
+    hauteur suit le ratio de la source, sans deformation
+    (4:1 -> 1108x277, 600x250 -> 1108x462, etc.)
   - optimise (Canva sort du GIF non compresse : ~340 Ko -> ~150 Ko)
-  - refuse de publier un fichier hors gabarit
+  - affiche en fin de run la hauteur a mettre dans le HTML de chaque
+    signature (attribut height de la balise <img>), puisqu'elle peut varier
+    d'un fichier a l'autre
 
 Usage :
     python normaliser_nominatives.py dossier_source/ -o nominatives/
     python normaliser_nominatives.py input/ -o nominatives/ --max-ko 200
+    python normaliser_nominatives.py input/ -o nominatives/ --strict
+        (ancien mode : tout force en 1108x277, deforme si le ratio differe)
 """
 
 import argparse
@@ -23,11 +29,12 @@ import sys
 import unicodedata
 
 # ============================================================
-#  GABARIT — doit correspondre a width/height dans les signatures
+#  GABARIT — la largeur doit correspondre a width dans les signatures
 # ============================================================
 LARGEUR = 1108
-HAUTEUR = 277
-MAX_KO_DEFAUT = 200
+HAUTEUR = 277            # hauteur de reference (ratio 4:1) : budget Ko et mode --strict
+RATIO_MIN, RATIO_MAX = 1.5, 6.0   # largeur/hauteur plausible ; hors bornes = probable mauvais fichier
+MAX_KO_DEFAUT = 200      # budget pour du 1108x277 ; proportionnel a la hauteur sinon
 MAX_FRAMES = 30          # au-dela, on sous-echantillonne avant redimension
 # ============================================================
 
@@ -68,6 +75,14 @@ def dimensions(chemin):
     return im.size, getattr(im, "n_frames", 1)
 
 
+def cible_pour(w, h, strict=False):
+    """Dimensions finales : largeur fixe LARGEUR, hauteur proportionnelle au
+    ratio de la source (ou 1108x277 force en mode strict)."""
+    if strict:
+        return LARGEUR, HAUTEUR
+    return LARGEUR, max(1, round(LARGEUR * h / w))
+
+
 def sous_echantillonner_si_besoin(source, tmp_path):
     """
     Si la source a beaucoup plus de frames que necessaire (ex: export ezgif
@@ -88,25 +103,30 @@ def sous_echantillonner_si_besoin(source, tmp_path):
     return (tmp_path if os.path.exists(tmp_path) else source), True
 
 
-def traiter(source, destination, max_octets):
+def traiter(source, destination, max_ko, strict=False):
     """Sous-echantillonne si besoin, redimensionne si besoin, puis compresse
-    jusqu'a tenir dans le budget."""
+    jusqu'a tenir dans le budget (max_ko pour du 1108x277, proportionnel a la
+    hauteur finale sinon).
+    Retourne (octets, couleurs, lossy, resize, allege, cible, plafond_octets)."""
     tmp_ech = destination + ".ech.gif"
     src_travail, allege = sous_echantillonner_si_besoin(source, tmp_ech)
 
     (w, h), _ = dimensions(src_travail)
-    besoin_resize = (w, h) != (LARGEUR, HAUTEUR)
+    cible = cible_pour(w, h, strict)
+    besoin_resize = (w, h) != cible
+    max_octets = int(max_ko * 1024 * cible[1] / HAUTEUR)
 
     base = ["gifsicle", "--careful", "-O3"]
     if besoin_resize:
-        base += [f"--resize={LARGEUR}x{HAUTEUR}"]
+        base += [f"--resize={cible[0]}x{cible[1]}"]
 
     resultat = None
     for couleurs, lossy in ((255, 30), (255, 60), (192, 60), (128, 80), (96, 100), (64, 140)):
         cmd = base + [f"--colors={couleurs}", f"--lossy={lossy}", src_travail, "-o", destination]
         subprocess.run(cmd, capture_output=True)
         if os.path.exists(destination):
-            resultat = (os.path.getsize(destination), couleurs, lossy, besoin_resize, allege)
+            resultat = (os.path.getsize(destination), couleurs, lossy, besoin_resize,
+                        allege, cible, max_octets)
             if resultat[0] <= max_octets:
                 break
 
@@ -122,7 +142,10 @@ def main():
     p = argparse.ArgumentParser(description="Normalise les GIF nominatifs en lot")
     p.add_argument("source", help="dossier contenant les GIF fournis")
     p.add_argument("-o", "--out", default="nominatives", help="dossier de sortie")
-    p.add_argument("--max-ko", type=int, default=MAX_KO_DEFAUT)
+    p.add_argument("--max-ko", type=int, default=MAX_KO_DEFAUT,
+                   help="budget pour du 1108x277 (proportionnel a la hauteur sinon)")
+    p.add_argument("--strict", action="store_true",
+                   help="force TOUT en 1108x277 (deforme si le ratio source differe)")
     args = p.parse_args()
 
     if not shutil.which("gifsicle"):
@@ -135,16 +158,23 @@ def main():
     if not fichiers:
         sys.exit(f"Aucun .gif dans {args.source}")
 
-    plafond = args.max_ko * 1024
-    print(f"Gabarit {LARGEUR}x{HAUTEUR}  |  budget {args.max_ko} Ko  |  {len(fichiers)} fichiers\n")
+    mode = "strict 1108x277" if args.strict else f"largeur {LARGEUR}, hauteur selon ratio"
+    print(f"Gabarit {mode}  |  budget {args.max_ko} Ko (a 277 px)  |  {len(fichiers)} fichiers\n")
     print(f"{'source':<38} {'->':^4} {'sortie':<16} {'avant':>8} {'apres':>8}  note")
-    print("-" * 92)
+    print("-" * 100)
 
-    vus, alertes, gain = {}, [], 0
+    vus, alertes, gain, hauteurs = {}, [], 0, {}
 
     for f in fichiers:
         src = os.path.join(args.source, f)
         prenom = prenom_depuis(f)
+
+        (sw, sh), _ = dimensions(src)
+        ratio = sw / sh
+        if not args.strict and not (RATIO_MIN <= ratio <= RATIO_MAX):
+            alertes.append(f"'{f}' : ratio {ratio:.2f}:1 ({sw}x{sh}) inhabituel pour une "
+                           f"signature — probablement pas le bon fichier, ignore")
+            continue
 
         if prenom in vus:
             suffixe = 2
@@ -157,39 +187,53 @@ def main():
         dst = os.path.join(args.out, f"{prenom}.gif")
         avant = os.path.getsize(src)
         try:
-            apres, coul, lossy, resize, allege = traiter(src, dst, plafond)
+            apres, coul, lossy, resize, allege, cible, plafond = traiter(
+                src, dst, args.max_ko, args.strict)
         except Exception as e:
             alertes.append(f"ECHEC sur '{f}' : {e}")
             continue
 
         (w, h), n = dimensions(dst)
+        hauteurs[prenom] = h
         note = []
         if allege:
-            note.append(f"frames reduites")
+            note.append("frames reduites")
         if resize:
             note.append("redimensionne")
+        if sw < LARGEUR:
+            alertes.append(f"'{prenom}.gif' : source en {sw} px de large, agrandie a {LARGEUR} — "
+                           f"risque de flou, redemander un export natif plus grand si possible")
         if apres > plafond:
-            note.append(f"depasse {args.max_ko} Ko")
-            alertes.append(f"'{prenom}.gif' fait {apres/1024:.0f} Ko malgre compression max — "
-                            f"a verifier a la main")
-        if (w, h) != (LARGEUR, HAUTEUR):
+            note.append(f"depasse {plafond // 1024} Ko")
+            alertes.append(f"'{prenom}.gif' fait {apres/1024:.0f} Ko malgre compression max "
+                           f"(budget {plafond/1024:.0f} Ko) — a verifier a la main")
+        if (w, h) != cible:
             note.append(f"HORS GABARIT {w}x{h}")
-            alertes.append(f"HORS GABARIT : {prenom}.gif fait {w}x{h} — ne pas publier")
+            alertes.append(f"HORS GABARIT : {prenom}.gif fait {w}x{h} "
+                           f"(attendu {cible[0]}x{cible[1]}) — ne pas publier")
+        note.append(f"{w}x{h}")
 
         gain += avant - apres
         print(f"{f[:37]:<38} {'->':^4} {prenom + '.gif':<16} "
               f"{avant/1024:>7.0f}K {apres/1024:>7.0f}K  {', '.join(note)}")
 
-    print("-" * 92)
-    print(f"\n{len(vus)} fichiers produits dans {args.out}/")
+    print("-" * 100)
+    print(f"\n{len(hauteurs)} fichiers produits dans {args.out}/")
     print(f"Gain total : {gain/1024/1024:.2f} Mo")
+
+    # Hauteur differente de 277 : a reporter dans <img height="..."> du HTML
+    autres = {k: v for k, v in hauteurs.items() if v != HAUTEUR}
+    if autres:
+        print(f'\nHAUTEUR A METTRE DANS LE HTML (width="{LARGEUR}", height=... ; defaut 277) :')
+        for k, v in sorted(autres.items()):
+            print(f'  - {k}.gif -> height="{v}"')
 
     if alertes:
         print("\nA VERIFIER :")
         for a in alertes:
             print(f"  - {a}")
     else:
-        print("\nTout est conforme au gabarit.")
+        print("\nTout est conforme.")
 
 
 if __name__ == "__main__":
