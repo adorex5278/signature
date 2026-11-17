@@ -5,17 +5,60 @@ redemander comment tout ça marche.
 
 ---
 
+## 0. Aide-mémoire (à lire en premier)
+
+### Allumer / éteindre le bandeau événementiel (le « switch »)
+
+Le bandeau est la 1re image de toutes les signatures. L'allumer ou l'éteindre =
+changer le contenu d'**un seul fichier** sur GitHub, `banniere_evenement_1108x277.gif`.
+**Rien à modifier sur les postes ni dans Outlook.** Valable pour toutes les
+signatures d'un coup. Délai : jusqu'à ~10 min (2 caches de 5 min), plus long
+dans les mails déjà ouverts (proxy Gmail).
+
+**État actuel : ÉTEINT** (le fichier servi est un GIF transparent 1108×1 px).
+
+| Je veux… | Avec le script (clone + Python) | Directement sur github.com (sans rien installer) |
+|---|---|---|
+| **Éteindre** | `python tools/bandeau.py off --push` | *Add file → Upload files* : déposer `bandeau/veille_1108x1.gif` **renommé** `banniere_evenement_1108x277.gif` |
+| **Rallumer** le bandeau en cours | `python tools/bandeau.py on --push` | idem avec `bandeau/evenement_courant.gif` renommé `banniere_evenement_1108x277.gif` |
+| **Nouveau** bandeau (autre événement) | `python tools/bandeau.py nouveau visuel.gif --push` | déposer le nouveau GIF (1108 px de large, < 2 Mo) sous le nom exact `banniere_evenement_1108x277.gif` |
+| Voir l'état | `python tools/bandeau.py status` | — |
+
+Le nom `banniere_evenement_1108x277.gif` ne change **jamais**, même si l'image
+n'a plus cette taille (c'est un nom d'URL, pas une description). Détails : §4 et §4bis.
+
+### Publier / modifier la signature d'une personne
+1. Normaliser : `python tools/normaliser_nominatives.py dossier_recu/ -o nominatives/`
+   (source fixe JPEG/PNG → `prenom.jpg` ; animation → `prenom.gif`).
+2. **Si le format change** (ex. `.gif` → `.jpg`), **supprimer l'ancien fichier** : le
+   Worker sert `.gif` en premier, puis `.jpg`, puis `.png`. L'URL des signatures ne
+   change pas (§9).
+3. Pousser sur `main`. La signature se met à jour chez tout le monde (~10 min).
+
+### Donner la signature à un collaborateur
+- **Gabarits HTML** : `python tools/generer_gabarits.py --worker https://greype-sig.greype.workers.dev -o gabarits/`
+  (une ligne « Cordialement, », le bandeau, puis la signature ; aucune hauteur imposée).
+- **Copie dans le presse-papiers** : `tools/copier_gabarits_gui.py` → `signatures_greype.exe`
+  (fenêtre avec la liste des prénoms, Ctrl+V dans Outlook). Compilation : voir l'en-tête du fichier.
+- **Outlook classique (bureau) : à vérifier** — coller du HTML dans l'éditeur de signature
+  peut faire **télécharger et stocker localement** les images au lieu de garder le lien ;
+  l'interrupteur du bandeau ne marcherait alors pas pour cette signature. Test : s'envoyer un
+  mail vers Gmail → *Afficher l'original* → on doit y trouver `greype-sig.greype.workers.dev`
+  (pas `cid:` ni un bloc base64). Le nouvel Outlook garde en principe le lien (à vérifier aussi).
+
+---
+
 ## 1. Vue d'ensemble
 
 Deux familles d'images, deux régimes différents :
 
 | | Bandeau événement | Signatures nominatives |
 |---|---|---|
-| Fichier | 1 seul, partagé par tout le monde | 1 par personne (30) |
-| Format | 1108 × 277 | 1108 × 277 |
+| Fichier | 1 seul, partagé par tout le monde | 1 par personne |
+| Format | largeur 1108, GIF (animé) | largeur 1108, hauteur selon le visuel (277 ou 462) |
 | Change quand ? | À chaque campagne (salon, Noël…) | Rarement (nom, poste, tél.) |
 | Qui le fournit | Toi / normalise_banniere.py | Marketing, export Canva |
-| Nommage | `banniere_evenement_1108x277.gif` (fixe) | `prenom.gif` |
+| Nommage | `banniere_evenement_1108x277.gif` (fixe) | `prenom.jpg` (visuel fixe) ou `prenom.gif` (animé) |
 
 **Le principe qui rend tout ça indolore : l'URL ne change jamais.**
 Les 30 signatures Outlook contiennent chacune deux `<img src="...">` figés.
@@ -36,13 +79,14 @@ signature/
 │   ├── evenement_courant.gif         ← le bandeau événement en cours (source)
 │   └── veille_1108x1.gif             ← GIF transparent 1 px = bandeau éteint
 ├── nominatives/
-│   ├── adrien.gif
-│   ├── alex.gif
-│   ├── ... (18 à ce jour, 30 à terme)
+│   ├── adrien.jpg                    ← prenom.jpg (visuel fixe) ou prenom.gif (animé)
+│   ├── alex.jpg
+│   ├── ... (une par personne ; le Worker sert .gif, puis .jpg, puis .png)
 ├── worker/
 │   └── worker.js                     ← Cloudflare Worker : URL stable sans extension (voir §9)
 ├── tools/
 │   ├── generer_gabarits.py           ← régénère les gabarits HTML (voir §9)
+│   ├── copier_gabarits_gui.py        ← exe « presse-papiers » pour coller dans Outlook (voir §0)
 │   ├── bandeau.py                    ← interrupteur du bandeau (on / off / nouveau)
 │   ├── normalise_banniere.py         ← pour le bandeau événement
 │   └── normaliser_nominatives.py     ← pour le lot de signatures perso
@@ -51,9 +95,18 @@ signature/
 
 ## 3. URL utilisées dans les signatures Outlook
 
+**URL actuelles (via le Worker Cloudflare, sans extension — voir §9) :**
+
+```
+Bandeau :     https://greype-sig.greype.workers.dev/bandeau
+Nominative :  https://greype-sig.greype.workers.dev/n/PRENOM
+```
+
+Le Worker va chercher les fichiers sur GitHub :
+
 ```
 Bandeau :     https://raw.githubusercontent.com/adorex5278/signature/main/banniere_evenement_1108x277.gif
-Nominative :  https://raw.githubusercontent.com/adorex5278/signature/main/nominatives/PRENOM.gif
+Nominative :  https://raw.githubusercontent.com/adorex5278/signature/main/nominatives/PRENOM.(gif|jpg|png)
 ```
 
 `raw.githubusercontent.com` fonctionne mais son cache est court (5 min) et
