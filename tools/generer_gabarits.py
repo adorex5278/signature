@@ -38,7 +38,7 @@ GABARIT = """<!DOCTYPE html>
 <body style="margin:20px;background:#ffffff;">
 
 <!-- ===== FORMULE DE POLITESSE — premiere ligne ===== -->
-<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#000000;">Cordialement,</p>
+<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#000000;">{salutation}</p>
 
 <!-- ===== BANDEAU EVENEMENT — en haut, identique pour tout le monde ===== -->
 <img src="{url_bandeau}" width="{largeur}" style="{style}" alt="">
@@ -61,6 +61,8 @@ def main():
                    help="depot GitHub (mode sans --worker) ; ex: adorex5278/luniprims-signature")
     p.add_argument("--titre", default="Signature GREYPE", help="titre de la page HTML")
     p.add_argument("--alt", default="GREYPE FRANCE", help="texte alternatif de la signature nominative")
+    p.add_argument("--salutation", default="Cordialement,",
+                   help="formule de politesse en premiere ligne (ex: 'Atentamente,' pour LUNIPRIM'S)")
     a = p.parse_args()
     if a.prefixe and not (a.prefixe.isalpha() and a.prefixe.islower() and a.prefixe.isascii()):
         sys.exit("--prefixe : lettres minuscules uniquement (ex: lp)")
@@ -90,7 +92,7 @@ def main():
         vus.add(prenom)
         url_nom = f"{a.worker.rstrip('/')}{pre}/n/{prenom}" if a.worker else f"{raw}nominatives/{f}"
         html = GABARIT.format(url_bandeau=url_bandeau, url_nominatif=url_nom, titre=a.titre,
-                              alt=a.alt, largeur=LARGEUR, style=STYLE)
+                              alt=a.alt, salutation=a.salutation, largeur=LARGEUR, style=STYLE)
         with open(os.path.join(a.out, f"signature_{prenom}.html"), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(html)
 
