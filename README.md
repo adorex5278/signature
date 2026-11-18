@@ -300,6 +300,19 @@ gratuit, sous-domaine `greype`). Testé : `/bandeau`, `/n/adrien` (jpg),
 Le code déployé est celui de `worker/worker.js` (à recoller dans l'éditeur
 Cloudflare si on le modifie).
 
+**Plusieurs sociétés, un seul Worker.** La table `SOCIETES` de `worker.js` associe un
+préfixe d'URL à un dépôt GitHub :
+
+| Société | URL | Dépôt |
+|---|---|---|
+| GREYPE | `/n/PRENOM`, `/bandeau` | `adorex5278/signature` (celui-ci) |
+| LUNIPRIM'S | `/lp/n/PRENOM`, `/lp/bandeau` | `adorex5278/luniprims-signature` |
+
+Ajouter une société = créer son dépôt (copie de `luniprims-signature`), ajouter **une ligne**
+dans `SOCIETES`, recoller le code dans Cloudflare. Chaque société a son propre bandeau et
+son propre interrupteur (`tools/bandeau.py` dans son dépôt). Gabarits d'une autre société :
+`python tools/generer_gabarits.py --worker https://greype-sig.greype.workers.dev --prefixe lp -o gabarits/`.
+
 **Mise en place (une fois, ~10 min, gratuit — plan Free : 100 000 requêtes/jour)**
 
 1. Créer un compte gratuit sur `dash.cloudflare.com` (e-mail + mot de passe).

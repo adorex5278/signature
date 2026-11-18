@@ -34,7 +34,7 @@ STYLE = "display:block;border:0;outline:none;max-width:100%;height:auto;"
 
 GABARIT = """<!DOCTYPE html>
 <html lang="fr">
-<head><meta charset="utf-8"><title>Signature GREYPE</title></head>
+<head><meta charset="utf-8"><title>{titre}</title></head>
 <body style="margin:20px;background:#ffffff;">
 
 <!-- ===== FORMULE DE POLITESSE — premiere ligne ===== -->
@@ -44,7 +44,7 @@ GABARIT = """<!DOCTYPE html>
 <img src="{url_bandeau}" width="{largeur}" style="{style}" alt="">
 
 <!-- ===== BLOC NOMINATIF — en dessous ===== -->
-<img src="{url_nominatif}" width="{largeur}" style="{style}margin-top:8px;" alt="GREYPE FRANCE">
+<img src="{url_nominatif}" width="{largeur}" style="{style}margin-top:8px;" alt="{alt}">
 
 </body>
 </html>
@@ -55,7 +55,17 @@ def main():
     p = argparse.ArgumentParser(description="Genere les gabarits HTML de signature")
     p.add_argument("-o", "--out", default="gabarits", help="dossier de sortie")
     p.add_argument("--worker", help="URL du Worker Cloudflare (ex: https://greype-sig.xxx.workers.dev)")
+    p.add_argument("--prefixe", default="",
+                   help="prefixe de societe du Worker (ex: lp pour LUNIPRIM'S -> <worker>/lp/n/<prenom>) ; vide = GREYPE")
+    p.add_argument("--depot", default="adorex5278/signature",
+                   help="depot GitHub (mode sans --worker) ; ex: adorex5278/luniprims-signature")
+    p.add_argument("--titre", default="Signature GREYPE", help="titre de la page HTML")
+    p.add_argument("--alt", default="GREYPE FRANCE", help="texte alternatif de la signature nominative")
     a = p.parse_args()
+    if a.prefixe and not (a.prefixe.isalpha() and a.prefixe.islower() and a.prefixe.isascii()):
+        sys.exit("--prefixe : lettres minuscules uniquement (ex: lp)")
+    raw = f"https://raw.githubusercontent.com/{a.depot}/main/"
+    pre = f"/{a.prefixe}" if a.prefixe else ""
 
     dossier = os.path.join(RACINE, "nominatives")
     fichiers = sorted(f for f in os.listdir(dossier) if f.lower().endswith(EXT_OK))
@@ -66,9 +76,9 @@ def main():
         base = a.worker.rstrip("/")
         if not base.startswith("https://"):
             sys.exit("--worker doit commencer par https://")
-        url_bandeau = base + "/bandeau"
+        url_bandeau = base + pre + "/bandeau"
     else:
-        url_bandeau = RAW + "banniere_evenement_1108x277.gif"
+        url_bandeau = raw + "banniere_evenement_1108x277.gif"
 
     os.makedirs(a.out, exist_ok=True)
     vus = set()
@@ -78,9 +88,9 @@ def main():
             print(f"ATTENTION : deux fichiers pour '{prenom}' dans nominatives/ — ignore {f}")
             continue
         vus.add(prenom)
-        url_nom = f"{a.worker.rstrip('/')}/n/{prenom}" if a.worker else f"{RAW}nominatives/{f}"
-        html = GABARIT.format(url_bandeau=url_bandeau, url_nominatif=url_nom,
-                              largeur=LARGEUR, style=STYLE)
+        url_nom = f"{a.worker.rstrip('/')}{pre}/n/{prenom}" if a.worker else f"{raw}nominatives/{f}"
+        html = GABARIT.format(url_bandeau=url_bandeau, url_nominatif=url_nom, titre=a.titre,
+                              alt=a.alt, largeur=LARGEUR, style=STYLE)
         with open(os.path.join(a.out, f"signature_{prenom}.html"), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(html)
 
